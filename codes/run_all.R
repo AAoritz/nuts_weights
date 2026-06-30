@@ -45,18 +45,21 @@ PROJECT_ROOT <- find_project_root()
 # Order matters: country_coverage runs first because it documents the inputs;
 # the heavier figure scripts follow. `group` is used by the CLI filters.
 
+# intext_numbers runs last: it consolidates the stats files written by the
+# validation/robustness scripts (plus the conversion-table counts) into the
+# single data file the manuscript reads, so it must come after its producers.
 scripts <- data.frame(
   name = c("country_coverage", "nuts_revisions_map", "robustness_slivers_sim",
-           "validation_eurostat", "validation_gdp_pop", "validation_area"),
+           "validation_eurostat", "validation_gdp_pop", "intext_numbers"),
   group = c("data", "figures", "figures",
-            "figures", "figures", "validation"),
+            "figures", "figures", "data"),
   outputs = c(
     "data/country_coverage_summary.csv, data/country_coverage_matrix.csv",
     "figs/european_nuts_changes.png",
-    "figs/robustness_slivers_sim.png",
-    "figs/validation_eurostat.png",
-    "figs/validation_gdp_pop_multiyear.png, figs/validation_gdp_pop_singleyear.png",
-    "(console diagnostics only — no figure)"
+    "figs/robustness_slivers_sim.png, data/stats/slivers_stats.rds",
+    "figs/validation_eurostat.png, data/stats/roundtrip_stats.rds",
+    "figs/validation_gdp_pop_*.png, data/stats/gdp_pop_stats.{csv,rds}",
+    "data/stats/intext_numbers.rds"
   ),
   stringsAsFactors = FALSE
 )

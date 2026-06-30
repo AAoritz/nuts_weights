@@ -297,3 +297,41 @@ for (v in unique(mape_chg$variable_label)) {
     sub$weight_label[nrow(sub)], sub$mape[nrow(sub)]
   ))
 }
+
+
+# =============================================================================
+# EXPORT IN-TEXT NUMBERS
+# =============================================================================
+# Saves the figures quoted in the Technical Validation round-trip paragraph so
+# the Quarto manuscript can pull them in via inline R (see codes/intext_numbers.R).
+# MAPE vectors are keyed by weight code (areaKm, pop11, pop21, artif_surf18,
+# artif_surf12, bu_vol) and reported over ALL regions (matching the diamonds in
+# the figure).
+
+dir.create("data/stats", showWarnings = FALSE, recursive = TRUE)
+
+mape_by_var <- results_b %>%
+  filter(!is.na(abs_rel_error)) %>%
+  group_by(variable, weight) %>%
+  summarise(mape = mean(abs_rel_error, na.rm = TRUE), .groups = "drop")
+
+named_mape <- function(v) {
+  x <- filter(mape_by_var, variable == v)
+  setNames(x$mape, x$weight)[weight_names]
+}
+
+roundtrip_stats <- list(
+  n_area           = n_area,
+  n_pop            = n_pop,
+  n_area_changed   = n_area_changed,
+  n_pop_changed    = n_pop_changed,
+  n_area_unchanged = n_area - n_area_changed,
+  n_pop_unchanged  = n_pop  - n_pop_changed,
+  n_steps          = length(CHAIN) - 1L,
+  chain            = CHAIN,
+  mape_area        = named_mape("area_km2"),  # all-regions MAPE, by weight
+  mape_pop         = named_mape("pop")        # all-regions MAPE, by weight
+)
+
+saveRDS(roundtrip_stats, "data/stats/roundtrip_stats.rds")
+cat("\nIn-text numbers saved to data/stats/roundtrip_stats.rds\n")

@@ -133,3 +133,33 @@ ggsave("figs/robustness_slivers_sim.png", p, width = 7, height = 4.5, dpi = 300)
 
 cat("Baseline MAE (no noise):", round(baseline_mae * 100, 4), "%\n")
 print(results_summary)
+
+
+# =============================================================================
+# EXPORT IN-TEXT NUMBERS
+# =============================================================================
+# Saves the figures quoted in the "Robustness of the Sliver Threshold"
+# paragraph so the Quarto manuscript can pull them in via inline R
+# (see codes/intext_numbers.R).
+
+dir.create("data/stats", showWarnings = FALSE, recursive = TRUE)
+
+# MAPE at the largest injection scenario (n = max), in percentage points.
+max_mae <- results_summary %>%
+  filter(n == max(n)) %>%
+  pull(mae_mean)
+
+slivers_stats <- list(
+  baseline_mape_pct = baseline_mae * 100,       # no-noise baseline, in %
+  max_mape_pct      = max_mae * 100,            # MAPE at n = n_max, in %
+  rise_pp           = (max_mae - baseline_mae) * 100,  # increase, percentage pts
+  n_min             = min(n_values[n_values > 0]),
+  n_max             = max(n_values),
+  n_step            = unique(diff(n_values)),
+  n_reps            = n_reps,
+  sliver_area_max   = 2,                        # Uniform(0, 2) km^2 upper bound
+  cw_n_entries      = nrow(cw_true)             # true 2006->2024 NUTS-3 crosswalk rows
+)
+
+saveRDS(slivers_stats, "data/stats/slivers_stats.rds")
+cat("In-text numbers saved to data/stats/slivers_stats.rds\n")

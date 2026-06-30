@@ -24,9 +24,6 @@ library(janitor)
 library(patchwork)  # for combining plots
 library(ggtext)
 library(readxl)
-library(extrafont)
-font_import()
-loadfonts()
 
 
 # LOAD NUTS DATA
@@ -236,8 +233,7 @@ plot_eu_from_to = function(from_version_year, to_version_year){
     ) +
     theme_void() +
     theme(
-      plot.title = element_markdown(size = 11, hjust = 0.5, margin = margin(b = 5), 
-                                family = "Times New Roman"),
+      plot.title = element_markdown(size = 11, hjust = 0.5, margin = margin(b = 5)),
       plot.margin = margin(5, 5, 5, 5)
     ) +
     # Labels
