@@ -66,35 +66,68 @@ This study presents a methodology, dataset and software for converting European 
 The dataset covers all administrative boundary changes across NUTS versions for all European Union member states, EFTA members, and — for versions prior to 2024 — the United Kingdom (see @tbl-country-coverage). These conversion tables capture not only simple one-to-one territorial transformations but also complex scenarios involving regional splits, mergers, and partial boundary adjustments. The methodology handles both absolute variables (such as counts or totals) and relative variables (such as rates or densities) through distinct interpolation procedures.
 
 
-```{r}
-#| echo: false
-#| warning: false
-#| label: tbl-country-coverage
-#| tbl-cap: "**Country Coverage**"
+
+::: {#tbl-country-coverage .cell tbl-cap='**Country Coverage**'}
+::: {.cell-output-display}
+\begingroup\fontsize{9}{11}\selectfont
+
+\begin{ThreePartTable}
+\begin{TableNotes}[para]
+\item \textit{Note:} 
+\item Coverage status and notes reflect the NUTS versions for which conversion weights are available for each country.
+\end{TableNotes}
+\begin{longtable}[t]{>{\raggedright\arraybackslash}p{1.5cm}>{\raggedright\arraybackslash}p{2cm}>{\raggedright\arraybackslash}p{4.5cm}>{\raggedright\arraybackslash}p{7cm}}
+\toprule
+Country Code & Country Name & Status & Coverage Note\\
+\midrule
+AT & Austria & EU member & Full coverage\\
+BE & Belgium & EU member & Full coverage\\
+BG & Bulgaria & EU member (since 2007) & Full coverage\\
+CH & Switzerland & EFTA & Full coverage\\
+CY & Cyprus & EU member (since 2004) & Full coverage\\
+\addlinespace
+CZ & Czechia & EU member (since 2004) & Full coverage\\
+DE & Germany & EU member & Full coverage\\
+DK & Denmark & EU member & Full coverage\\
+EE & Estonia & EU member (since 2004) & Full coverage\\
+EL & Greece & EU member & Full coverage\\
+\addlinespace
+ES & Spain & EU member & Full coverage\\
+FI & Finland & EU member & Full coverage\\
+FR & France & EU member & Full coverage\\
+HR & Croatia & EU member (since 2013) & Full coverage\\
+HU & Hungary & EU member (since 2004) & Full coverage\\
+\addlinespace
+IE & Ireland & EU member & Full coverage\\
+IS & Iceland & EFTA & Full coverage\\
+IT & Italy & EU member & Full coverage\\
+LT & Lithuania & EU member (since 2004) & Full coverage\\
+LU & Luxembourg & EU member & Full coverage\\
+\addlinespace
+LV & Latvia & EU member (since 2004) & Full coverage\\
+MT & Malta & EU member (since 2004) & Full coverage\\
+NL & Netherlands & EU member & Full coverage\\
+NO & Norway & EFTA & Full coverage\\
+PL & Poland & EU member (since 2004) & Full coverage\\
+\addlinespace
+PT & Portugal & EU member & Full coverage\\
+RO & Romania & EU member (since 2007) & Full coverage\\
+SE & Sweden & EU member & Full coverage\\
+SI & Slovenia & EU member (since 2004) & Full coverage\\
+SK & Slovakia & EU member (since 2004) & Full coverage\\
+\addlinespace
+LI & Liechtenstein & EFTA & Present in matrices not involving NUTS 2021; absent from all NUTS 2021 pairs\\
+UK & United Kingdom & EU member until Brexit (2020) & Present in matrices up to NUTS 2021; absent from all NUTS 2024 pairs (post-Brexit)\\
+\bottomrule
+\insertTableNotes
+\end{longtable}
+\end{ThreePartTable}
+\endgroup{}
 
 
-library(tidyverse)
-library(kableExtra)
-tbl_data <- read_csv("data/country_coverage_summary.csv") %>%
-  set_names("Country Code", "Country Name", "Status", "Coverage Note")
-if (knitr::pandoc_to("docx")) {
-  kable(tbl_data, booktabs = TRUE, linesep = "")
-} else {
-  kable(tbl_data, booktabs = TRUE, linesep = "") %>%
-    kable_styling(font_size = 9) %>%
-    column_spec(1, width = "1.5cm") %>%
-    column_spec(2, width = "2cm") %>%
-    column_spec(3, width = "4.5cm") %>%
-    column_spec(4, width = "7cm") %>%
-    footnote(
-      general = "Coverage status and notes reflect the NUTS versions for which conversion weights are available for each country.",
-      general_title = "Note:",
-      footnote_as_chunk = TRUE,
-      threeparttable = TRUE
-    )
-}
+:::
+:::
 
-```
 
 
 The primary output consists of conversion tables that support the conversion of variables between any two NUTS versions in either direction and facilitate the aggregation from lower to higher hierarchical levels (NUTS-3 to NUTS-2 or NUTS-1). Additionally, we propose tools that rely on these tables: an online converter that allows users to upload datasets and receive converted outputs, and an open-source R package that implements the conversion framework for offline use. This framework accommodates mixed-version datasets commonly encountered in Eurostat releases, where different countries or time periods may employ different NUTS classifications.
@@ -199,19 +232,14 @@ The resulting dataset shows CA113 with a population of 390,000 and a value of 8.
 ## Data Records {.unnumbered}
 
 
-```{r}
-#| echo: false
-#| output: false
-library(tidyverse)
-nuts_files <- list.files("data/jrc_nuts_converter_matrices", full.names = T)
-m_example <- read_csv(nuts_files[1])
-nr_cols = ncol(m_example)
-nr_rows = nrow(m_example)
-nr_files = length(nuts_files)
-```
+
+::: {.cell}
+
+:::
 
 
-The conversion tables can be downloaded with the url [https://territorial.ec.europa.eu/publications-stories/nuts-converter](https://territorial.ec.europa.eu/publications-stories/nuts-converter?lng=en&ctx=regional). The tables are divided into `{r} nr_files` csv files, where each file contains flows of area, population, artificial surfaces and built-up volume at the level of a combination of NUTS codes in two different versions (either for NUTS levels 1, 2 or 3). Every csv file contains `{r} nr_cols` columns with the variables described in @tbl-variables.
+
+The conversion tables can be downloaded with the url [https://territorial.ec.europa.eu/publications-stories/nuts-converter](https://territorial.ec.europa.eu/publications-stories/nuts-converter?lng=en&ctx=regional). The tables are divided into 45 csv files, where each file contains flows of area, population, artificial surfaces and built-up volume at the level of a combination of NUTS codes in two different versions (either for NUTS levels 1, 2 or 3). Every csv file contains 9 columns with the variables described in @tbl-variables.
 
 | **Variable Name** | **Variable Description**                |
 |---------------| --------------------------------------------|
@@ -263,7 +291,7 @@ In our second validation exercise in @fig-validation-gdp-pop, we validate the ac
 
 In our third validation exercise in @fig-robustness-slivers, we assess the sensitivity of area-weighted conversions to the choice of discarding geometric slivers below 1 km². Imprecise boundary digitisation or small improvements in boundary resolution across NUTS versions can produce spurious intersection polygons — false positive slivers — that do not reflect genuine territorial overlaps. To quantify the impact of retaining such artefacts, we simulate their presence by injecting artificially generated flows into the true NUTS 2006-to-2024 NUTS 3 crosswalk. For each simulation run, $n$ flows are sampled at random (with replacement) from the set of real region pairs, and each sampled flow is assigned an area drawn from a uniform(0, 2) km² distribution. These synthetic flows are appended to the true crosswalk, after which the full area-weighted conversion of 2021 population from NUTS 2006 to NUTS 2024 is performed. The recovered values are compared to the ground truth derived directly from the raster overlay, and the mean absolute percentage error (MAPE) is recorded. We vary $n$ from 100 to 2000 in steps of 100 and repeat each scenario 50 times.
 
-@fig-robustness-slivers shows that the MAPE remains virtually flat across the full range of injected slivers. Even at 2000 false positives — roughly `r round(2000 / nrow(dplyr::filter(nuts::cross_walks, from_version == "2006", to_version == "2024", nchar(from_code) == 5)) * 100)`% of the actual NUTS 3 crosswalk entries — the mean error rises by less than 0.02 percentage points relative to the no-noise baseline of 2.10%. The narrow inter-quantile bands across replications confirm that this insensitivity is stable and not driven by particular random samples. The negligible effect follows directly from the weighting mechanics: each injected sliver carries at most 2 km² of area, whereas the genuine transition regions span tens to thousands of km², so the spurious flows receive near-zero weight shares and contribute almost nothing to the converted values. These results validate the 1 km² sliver threshold as a conservative and inconsequential choice.
+@fig-robustness-slivers shows that the MAPE remains virtually flat across the full range of injected slivers. Even at 2000 false positives — roughly 135% of the actual NUTS 3 crosswalk entries — the mean error rises by less than 0.02 percentage points relative to the no-noise baseline of 2.10%. The narrow inter-quantile bands across replications confirm that this insensitivity is stable and not driven by particular random samples. The negligible effect follows directly from the weighting mechanics: each injected sliver carries at most 2 km² of area, whereas the genuine transition regions span tens to thousands of km², so the spurious flows receive near-zero weight shares and contribute almost nothing to the converted values. These results validate the 1 km² sliver threshold as a conservative and inconsequential choice.
 
 ![**Sensitivity of area-weighted NUTS conversion accuracy to false positive slivers.** The line shows the mean absolute percentage error (MAPE) of 2021 population converted from NUTS 2006 to NUTS 2024 using area weights, as a function of the number of artificially injected sliver flows. Each injected flow is assigned an area drawn from Uniform(0, 2) km². Shaded bands indicate the 25–75th percentile (dark) and 5–95th percentile (light) across 50 replications per scenario. The curve anchors at $n=0$ (no injected slivers), which corresponds to the true crosswalk baseline. `{\footnotesize\itshape Source: NUTS conversion tables.}`{=latex}](figs/robustness_slivers_sim.png){#fig-robustness-slivers width=80%}
 
@@ -331,3 +359,4 @@ None.
 ## Figures and Tables  {.unnumbered}
 
 In text.
+
