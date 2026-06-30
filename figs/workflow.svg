@@ -1,0 +1,155 @@
+<svg width="100%" viewBox="0 0 680 820" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <marker id="arrow" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+      <path d="M2 1L8 5L2 9" fill="none" stroke="#534AB7"
+            stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+    </marker>
+  </defs>
+
+  <!-- Stage A label -->
+  <text font-family="sans-serif" font-size="12" font-weight="500"
+        fill="#444" x="40" y="36">Stage A — Transition region construction</text>
+
+  <!-- A1: Intersect -->
+  <rect x="180" y="50" width="320" height="56" rx="8"
+        fill="#EEEDFE" stroke="#534AB7" stroke-width="0.5"/>
+  <text font-family="sans-serif" font-size="14" font-weight="500"
+        fill="#26215C" x="340" y="73" text-anchor="middle" dominant-baseline="central">
+    Intersect NUTS level 3 boundaries</text>
+  <text font-family="sans-serif" font-size="12" fill="#3C3489"
+        x="340" y="91" text-anchor="middle" dominant-baseline="central">
+    Two versions (e.g. 2010 to 2024) → transition regions</text>
+
+  <line x1="340" y1="106" x2="340" y2="134"
+        stroke="#534AB7" stroke-width="1.5" marker-end="url(#arrow)"/>
+
+  <!-- A2: Remove slivers -->
+  <rect x="180" y="134" width="320" height="56" rx="8"
+        fill="#EEEDFE" stroke="#534AB7" stroke-width="0.5"/>
+  <text font-family="sans-serif" font-size="14" font-weight="500"
+        fill="#26215C" x="340" y="157" text-anchor="middle" dominant-baseline="central">
+    Remove slivers</text>
+  <text font-family="sans-serif" font-size="12" fill="#3C3489"
+        x="340" y="175" text-anchor="middle" dominant-baseline="central">
+    Discard regions below 1 km²</text>
+
+  <line x1="340" y1="190" x2="340" y2="218"
+        stroke="#534AB7" stroke-width="1.5" marker-end="url(#arrow)"/>
+
+  <!-- A3: Assign IDs -->
+  <rect x="180" y="218" width="320" height="56" rx="8"
+        fill="#EEEDFE" stroke="#534AB7" stroke-width="0.5"/>
+  <text font-family="sans-serif" font-size="14" font-weight="500"
+        fill="#26215C" x="340" y="241" text-anchor="middle" dominant-baseline="central">
+    Assign unique identifiers</text>
+  <text font-family="sans-serif" font-size="12" fill="#3C3489"
+        x="340" y="259" text-anchor="middle" dominant-baseline="central">
+    Concatenate parent NUTS codes (e.g. AT127-AT112) </text>
+
+  <line x1="340" y1="274" x2="340" y2="302"
+        stroke="#534AB7" stroke-width="1.5" marker-end="url(#arrow)"/>
+
+  <!-- A4: Dissolve -->
+  <rect x="180" y="302" width="320" height="56" rx="8"
+        fill="#EEEDFE" stroke="#534AB7" stroke-width="0.5"/>
+  <text font-family="sans-serif" font-size="14" font-weight="500"
+        fill="#26215C" x="340" y="325" text-anchor="middle" dominant-baseline="central">
+    Dissolve to unique identifier</text>
+  <text font-family="sans-serif" font-size="12" fill="#3C3489"
+        x="340" y="343" text-anchor="middle" dominant-baseline="central">
+    One multipart feature per ID</text>
+
+  <line x1="340" y1="358" x2="340" y2="382"
+        stroke="#888" stroke-width="1.5" marker-end="url(#arrow)"/>
+
+  <!-- Output A: Elementary regions layer -->
+  <rect x="213" y="382" width="254" height="44" rx="8"
+        fill="#F1EFE8" stroke="#5F5E5A" stroke-width="0.5"/>
+  <text font-family="sans-serif" font-size="14" font-weight="500"
+        fill="#2C2C2A" x="340" y="404" text-anchor="middle" dominant-baseline="central">
+    Transition regions layer</text>
+
+  <!-- Divider + Stage B label -->
+  <line x1="40" y1="450" x2="640" y2="450"
+        stroke="#ccc" stroke-width="0.5" stroke-dasharray="4 4"/>
+  <text font-family="sans-serif" font-size="12" font-weight="500"
+        fill="#444" x="40" y="470">Stage B — Raster overlay and aggregation</text>
+
+  <!-- Dashed connector: Transition regions layer → horizontal rail → four raster boxes -->
+  <path d="M340 426 L340 456" fill="none" stroke="#888" stroke-width="1" stroke-dasharray="4 3"/>
+  <path d="M94 456 L586 456"  fill="none" stroke="#888" stroke-width="1" stroke-dasharray="4 3"/>
+  <path d="M94 456 L94 486"   fill="none" stroke="#888" stroke-width="1" stroke-dasharray="4 3"/>
+  <path d="M258 456 L258 486" fill="none" stroke="#888" stroke-width="1" stroke-dasharray="4 3"/>
+  <path d="M422 456 L422 486" fill="none" stroke="#888" stroke-width="1" stroke-dasharray="4 3"/>
+  <path d="M586 456 L586 486" fill="none" stroke="#888" stroke-width="1" stroke-dasharray="4 3"/>
+
+  <!-- Area -->
+  <rect x="20" y="486" width="148" height="56" rx="8"
+        fill="#E1F5EE" stroke="#0F6E56" stroke-width="0.5"/>
+  <text font-family="sans-serif" font-size="14" font-weight="500"
+        fill="#04342C" x="94" y="509" text-anchor="middle" dominant-baseline="central">
+    Area</text>
+  <text font-family="sans-serif" font-size="12" fill="#085041"
+        x="94" y="527" text-anchor="middle" dominant-baseline="central">
+    Surface of polygons</text>
+
+  <!-- Population counts -->
+  <rect x="184" y="486" width="148" height="56" rx="8"
+        fill="#E1F5EE" stroke="#0F6E56" stroke-width="0.5"/>
+  <text font-family="sans-serif" font-size="14" font-weight="500"
+        fill="#04342C" x="258" y="509" text-anchor="middle" dominant-baseline="central">
+    Population counts</text>
+  <text font-family="sans-serif" font-size="12" fill="#085041"
+        x="258" y="527" text-anchor="middle" dominant-baseline="central">
+    100 m × 100 m raster</text>
+
+  <!-- Artificial surface -->
+  <rect x="348" y="486" width="148" height="56" rx="8"
+        fill="#E1F5EE" stroke="#0F6E56" stroke-width="0.5"/>
+  <text font-family="sans-serif" font-size="14" font-weight="500"
+        fill="#04342C" x="422" y="509" text-anchor="middle" dominant-baseline="central">
+    Artificial surface</text>
+  <text font-family="sans-serif" font-size="12" fill="#085041"
+        x="422" y="527" text-anchor="middle" dominant-baseline="central">
+    100 m × 100 m raster</text>
+
+  <!-- Built-up volume -->
+  <rect x="512" y="486" width="148" height="56" rx="8"
+        fill="#E1F5EE" stroke="#0F6E56" stroke-width="0.5"/>
+  <text font-family="sans-serif" font-size="14" font-weight="500"
+        fill="#04342C" x="586" y="509" text-anchor="middle" dominant-baseline="central">
+    Built-up volume</text>
+  <text font-family="sans-serif" font-size="12" fill="#085041"
+        x="586" y="527" text-anchor="middle" dominant-baseline="central">
+    100 m × 100 m raster</text>
+
+  <!-- Solid arrows from four rasters to overlay -->
+  <line x1="94"  y1="542" x2="94"  y2="610"
+        stroke="#0F6E56" stroke-width="1.5" marker-end="url(#arrow)"/>
+  <line x1="258" y1="542" x2="258" y2="610"
+        stroke="#0F6E56" stroke-width="1.5" marker-end="url(#arrow)"/>
+  <line x1="422" y1="542" x2="422" y2="610"
+        stroke="#0F6E56" stroke-width="1.5" marker-end="url(#arrow)"/>
+  <line x1="586" y1="542" x2="586" y2="610"
+        stroke="#0F6E56" stroke-width="1.5" marker-end="url(#arrow)"/>
+
+  <!-- B1: Overlay -->
+  <rect x="60" y="610" width="560" height="56" rx="8"
+        fill="#E1F5EE" stroke="#0F6E56" stroke-width="0.5"/>
+  <text font-family="sans-serif" font-size="14" font-weight="500"
+        fill="#04342C" x="340" y="633" text-anchor="middle" dominant-baseline="central">
+    Overlay rasters with transition regions</text>
+  <text font-family="sans-serif" font-size="12" fill="#085041"
+        x="340" y="651" text-anchor="middle" dominant-baseline="central">
+    Sum cell values within each region per variable</text>
+
+  <line x1="340" y1="666" x2="340" y2="694"
+        stroke="#888" stroke-width="1.5" marker-end="url(#arrow)"/>
+
+  <!-- Output B -->
+  <rect x="113" y="694" width="454" height="44" rx="8"
+        fill="#F1EFE8" stroke="#5F5E5A" stroke-width="0.5"/>
+  <text font-family="sans-serif" font-size="14" font-weight="500"
+        fill="#2C2C2A" x="340" y="716" text-anchor="middle" dominant-baseline="central">
+    Transition regions with associated weights</text>
+</svg>

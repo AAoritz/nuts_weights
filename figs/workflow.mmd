@@ -1,0 +1,21 @@
+flowchart TD
+    A1["Intersect NUTS L3 boundaries\n(two versions → candidate elementary regions)"]
+    A2["Remove slivers\n(discard regions below 1 km²)"]
+    A3["Assign unique identifiers\n(concatenate parent NUTS codes)"]
+    A4["Dissolve to unique identifier\n(one multipart feature per ID)"]
+    ER[("Elementary regions layer")]
+
+    A1 --> A2 --> A3 --> A4 --> ER
+
+    POP["Population counts\n(100 m × 100 m raster)"]
+    ART["Artificial surface coverage\n(100 m × 100 m raster)"]
+    BUV["Built-up volume\n(100 m × 100 m raster)"]
+
+    B1["Overlay rasters with elementary regions\n(sum cell values within each region per variable)"]
+    OUT[("Elementary regions with ancillary sums")]
+
+    ER --> B1
+    POP --> B1
+    ART --> B1
+    BUV --> B1
+    B1 --> OUT

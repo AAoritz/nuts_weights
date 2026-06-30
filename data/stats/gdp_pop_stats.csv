@@ -1,0 +1,25 @@
+variable,weight,weight_label,n_obs,n_regions,n_years,mape,median_ape,p90_ape,bias
+population_multiyear,areaKm,Area,124,20,9,7.45,3.94,12.163,2.071
+population_multiyear,artif_surf12,Artificial Surface 2012,124,20,9,2.752,0.914,3.296,0.902
+population_multiyear,artif_surf18,Artificial Surface 2018,124,20,9,2.847,0.948,3.448,0.952
+population_multiyear,bu_vol,Built-up Volume,124,20,9,1.862,1.35,3.951,0.405
+population_multiyear,pop11,Population 2011,124,20,9,0.578,0.135,2.151,0.326
+population_multiyear,pop21,Population 2021,124,20,9,0.426,0.045,0.743,0.355
+gdp_multiyear,areaKm,Area,147,20,8,25.623,5.41,48.522,16.663
+gdp_multiyear,artif_surf12,Artificial Surface 2012,147,20,8,14.925,2.304,32.465,10.642
+gdp_multiyear,artif_surf18,Artificial Surface 2018,147,20,8,15.132,2.337,32.832,10.77
+gdp_multiyear,bu_vol,Built-up Volume,147,20,8,11.072,2.59,22.893,7.769
+gdp_multiyear,pop11,Population 2011,147,20,8,8.528,1.737,18.781,6.404
+gdp_multiyear,pop21,Population 2021,147,20,8,8.469,1.575,17.942,6.365
+population_singleyear,areaKm,Area,20,20,1,13.131,5.383,27.952,4.972
+population_singleyear,artif_surf12,Artificial Surface 2012,20,20,1,4.772,1.159,5.824,1.704
+population_singleyear,artif_surf18,Artificial Surface 2018,20,20,1,4.845,1.106,5.69,1.766
+population_singleyear,bu_vol,Built-up Volume,20,20,1,2.501,2.015,4.494,0.81
+population_singleyear,pop11,Population 2011,20,20,1,0.866,0.351,2.245,0.317
+population_singleyear,pop21,Population 2021,20,20,1,0.448,0.051,0.949,0.244
+gdp_singleyear,areaKm,Area,20,20,2,24.285,5.756,46.266,15.81
+gdp_singleyear,artif_surf12,Artificial Surface 2012,20,20,2,14.069,2.541,27.925,10.093
+gdp_singleyear,artif_surf18,Artificial Surface 2018,20,20,2,14.263,2.438,27.737,10.211
+gdp_singleyear,bu_vol,Built-up Volume,20,20,2,10.615,2.397,21.395,7.526
+gdp_singleyear,pop11,Population 2011,20,20,2,8.206,1.998,17.064,6.251
+gdp_singleyear,pop21,Population 2021,20,20,2,8.132,1.967,17.352,6.193

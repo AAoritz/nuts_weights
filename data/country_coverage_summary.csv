@@ -1,0 +1,33 @@
+country_code,name,status,coverage_note
+AT,Austria,EU member,Full coverage
+BE,Belgium,EU member,Full coverage
+BG,Bulgaria,EU member (since 2007),Full coverage
+CH,Switzerland,EFTA,Full coverage
+CY,Cyprus,EU member (since 2004),Full coverage
+CZ,Czechia,EU member (since 2004),Full coverage
+DE,Germany,EU member,Full coverage
+DK,Denmark,EU member,Full coverage
+EE,Estonia,EU member (since 2004),Full coverage
+EL,Greece,EU member,Full coverage
+ES,Spain,EU member,Full coverage
+FI,Finland,EU member,Full coverage
+FR,France,EU member,Full coverage
+HR,Croatia,EU member (since 2013),Full coverage
+HU,Hungary,EU member (since 2004),Full coverage
+IE,Ireland,EU member,Full coverage
+IS,Iceland,EFTA,Full coverage
+IT,Italy,EU member,Full coverage
+LT,Lithuania,EU member (since 2004),Full coverage
+LU,Luxembourg,EU member,Full coverage
+LV,Latvia,EU member (since 2004),Full coverage
+MT,Malta,EU member (since 2004),Full coverage
+NL,Netherlands,EU member,Full coverage
+NO,Norway,EFTA,Full coverage
+PL,Poland,EU member (since 2004),Full coverage
+PT,Portugal,EU member,Full coverage
+RO,Romania,EU member (since 2007),Full coverage
+SE,Sweden,EU member,Full coverage
+SI,Slovenia,EU member (since 2004),Full coverage
+SK,Slovakia,EU member (since 2004),Full coverage
+LI,Liechtenstein,EFTA,Present in matrices not involving NUTS 2021; absent from all NUTS 2021 pairs
+UK,United Kingdom,EU member until Brexit (2020),Present in matrices up to NUTS 2021; absent from all NUTS 2024 pairs (post-Brexit)
