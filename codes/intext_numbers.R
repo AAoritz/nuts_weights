@@ -10,7 +10,9 @@
 # │  Inputs     data/stats/roundtrip_stats.rds   (validation_eurostat.R)
 # │             data/stats/gdp_pop_stats.rds      (validation_gdp_pop.R)
 # │             data/stats/slivers_stats.rds      (robustness_slivers_sim.R)
-# │             data/jrc_nuts_converter_matrices/ (conversion tables)
+# │             data/stats/heterogeneity_stats.rds (validation_heterogeneity.R)
+# │             raw csv tables of the pinned nuts release, downloaded by
+# │             codes/_nuts_source.R (Data Records counts only)
 # │  Output     data/stats/intext_numbers.rds     (named list `nums`)
 # └────────────────────────────────────────────────────────────────────────────
 
@@ -18,24 +20,32 @@ library(tidyverse)
 
 stats_dir <- "data/stats"
 
-need <- c("roundtrip_stats.rds", "gdp_pop_stats.rds", "slivers_stats.rds")
+need <- c("roundtrip_stats.rds", "gdp_pop_stats.rds", "slivers_stats.rds",
+          "heterogeneity_stats.rds")
 missing <- need[!file.exists(file.path(stats_dir, need))]
 if (length(missing) > 0) {
   stop("Missing stats file(s): ", paste(missing, collapse = ", "),
        "\n  Run the producing scripts first (validation_eurostat.R, ",
-       "validation_gdp_pop.R, robustness_slivers_sim.R).")
+       "validation_gdp_pop.R, robustness_slivers_sim.R, ",
+       "validation_heterogeneity.R).")
 }
 
 rt <- readRDS(file.path(stats_dir, "roundtrip_stats.rds"))   # round-trip
 gp <- readRDS(file.path(stats_dir, "gdp_pop_stats.rds"))      # Eurostat GDP/pop
 sl <- readRDS(file.path(stats_dir, "slivers_stats.rds"))      # sliver robustness
+het <- readRDS(file.path(stats_dir, "heterogeneity_stats.rds")) # error heterogeneity
 
 
 # ── Data Records: shape of the conversion tables ───────────────────────────────
-nuts_files <- list.files("data/jrc_nuts_converter_matrices", full.names = TRUE)
-m_example  <- read_csv(nuts_files[1], show_col_types = FALSE)
+# These counts describe the csv files as deposited, so they are taken from the
+# raw csv tables of the pinned release and not from the package's cross_walks.
+source("codes/_nuts_source.R")
+require_nuts_version()
+nuts_files <- list.files(nuts_matrices_dir(), pattern = "\\.csv$", full.names = TRUE)
 nr_files   <- length(nuts_files)
-nr_cols    <- ncol(m_example)
+nr_cols    <- unique(map_int(nuts_files, ~ ncol(read_csv(.x, n_max = 0,
+                                                         show_col_types = FALSE))))
+stopifnot(length(nr_cols) == 1)   # every csv file has the same columns
 
 
 # ── Eurostat GDP/pop validation: pull the single-year vectors by weight ────────
@@ -95,6 +105,9 @@ ex <- list(
 
 # ── Assemble the flat list used by the manuscript ──────────────────────────────
 nums <- list(
+  # Version of the nuts package whose cross_walks the validation scripts used --
+  nuts_version = as.character(utils::packageVersion("nuts")),
+
   # Data Records ---------------------------------------------------------------
   nr_files = nr_files,
   nr_cols  = nr_cols,
@@ -105,6 +118,8 @@ nums <- list(
   rt_n_area_unchanged = rt$n_area_unchanged,
   rt_n_pop_unchanged  = rt$n_pop_unchanged,
   rt_n_steps          = rt$n_steps,
+  rt_n_excluded       = rt$n_excluded,  # regions without a counterpart in every version
+  rt_excluded         = rt$excluded,
   rt_mape_area        = rt$mape_area,   # all-regions MAPE (%), keyed by weight code
   rt_mape_pop         = rt$mape_pop,
 
@@ -115,6 +130,7 @@ nums <- list(
   gp_mape_pop         = gp_mape_pop,    # single-year MAPE (%), keyed by weight
   gp_mape_gdp         = gp_mape_gdp,
   gp_gdp_minus_pop_pp = gp_gdp_minus_pop_pp,
+  gp_capital          = gp$capital,     # regions formed around Lisbon and Riga
 
   # Technical Validation 3: sliver robustness (robustness_slivers_sim.R) --------
   sl_baseline_mape_pct = sl$baseline_mape_pct,
@@ -125,6 +141,14 @@ nums <- list(
   sl_n_reps            = sl$n_reps,
   sl_sliver_area_max   = sl$sliver_area_max,
   sl_cw_n_entries      = sl$cw_n_entries,
+  sl_max_mape_pct      = sl$max_mape_pct,
+  sl_src_area_median   = sl$src_area_median,
+  sl_n_candidate_pairs = sl$n_candidate_pairs,
+  sl_n_sources         = sl$n_sources,
+  sl_n_sources_neigh   = sl$n_sources_neigh,
+
+  # Technical Validation 4: heterogeneity (validation_heterogeneity.R) ----------
+  het = het,
 
   # Methods worked examples ----------------------------------------------------
   ex = ex

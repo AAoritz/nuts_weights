@@ -7,7 +7,7 @@
 # Usage (from the project root):
 #   Rscript codes/run_all.R              # run everything
 #   Rscript codes/run_all.R figures      # only scripts that write a figure
-#   Rscript codes/run_all.R validation   # only the validation_* scripts
+#   Rscript codes/run_all.R validation   # only the validation and robustness scripts
 #   Rscript codes/run_all.R nuts_revisions_map validation_eurostat
 #                                         # named scripts (with or without .R)
 #
@@ -45,20 +45,28 @@ PROJECT_ROOT <- find_project_root()
 # Order matters: country_coverage runs first because it documents the inputs;
 # the heavier figure scripts follow. `group` is used by the CLI filters.
 
+# validation_heterogeneity reads the region-level errors saved by
+# validation_eurostat, so it must follow it.
 # intext_numbers runs last: it consolidates the stats files written by the
 # validation/robustness scripts (plus the conversion-table counts) into the
 # single data file the manuscript reads, so it must come after its producers.
 scripts <- data.frame(
   name = c("country_coverage", "nuts_revisions_map", "robustness_slivers_sim",
-           "validation_eurostat", "validation_gdp_pop", "intext_numbers"),
-  group = c("data", "figures", "figures",
-            "figures", "figures", "data"),
+           "validation_eurostat", "validation_gdp_pop", "validation_heterogeneity",
+           "merge_example_figures",
+           "intext_numbers"),
+  # Space-separated groups; a script can belong to several.
+  group = c("data", "figures", "figures validation",
+            "figures validation", "figures validation", "figures validation",
+            "figures", "data"),
   outputs = c(
     "data/country_coverage_summary.csv, data/country_coverage_matrix.csv",
     "figs/european_nuts_changes.png",
     "figs/robustness_slivers_sim.png, data/stats/slivers_stats.rds",
-    "figs/validation_eurostat.png, data/stats/roundtrip_stats.rds",
+    "figs/validation_eurostat.png, data/stats/roundtrip_{stats,regions}.rds",
     "figs/validation_gdp_pop_*.png, data/stats/gdp_pop_stats.{csv,rds}",
+    "figs/validation_heterogeneity.png, data/stats/heterogeneity_stats.rds",
+    "figs/example_absolute.png, figs/example_relative.png",
     "data/stats/intext_numbers.rds"
   ),
   stringsAsFactors = FALSE
@@ -102,17 +110,21 @@ run_one <- function(name, root = PROJECT_ROOT) {
 # script names, preserving the registry order and dropping duplicates.
 resolve_selection <- function(selectors) {
   if (length(selectors) == 0) return(scripts$name)
-  selectors <- sub("\\.R$", "", selectors)          # tolerate "foo.R"
-  groups    <- intersect(selectors, unique(scripts$group))
-  named     <- intersect(selectors, scripts$name)
-  unknown   <- setdiff(selectors, c(groups, named))
+  selectors  <- sub("\\.R$", "", selectors)          # tolerate "foo.R"
+  group_list <- strsplit(scripts$group, " ", fixed = TRUE)
+  all_groups <- unique(unlist(group_list))
+  groups     <- intersect(selectors, all_groups)
+  named      <- intersect(selectors, scripts$name)
+  unknown    <- setdiff(selectors, c(groups, named))
   if (length(unknown) > 0) {
-    message("  ! Unknown selector(s): ", paste(unknown, collapse = ", "))
-    message("    Valid scripts: ", paste(scripts$name, collapse = ", "))
-    message("    Valid groups:  ", paste(unique(scripts$group), collapse = ", "))
+    # Fail instead of silently running nothing.
+    stop("Unknown selector(s): ", paste(unknown, collapse = ", "),
+         "\n  Valid scripts: ", paste(scripts$name, collapse = ", "),
+         "\n  Valid groups:  ", paste(all_groups, collapse = ", "),
+         call. = FALSE)
   }
-  keep <- scripts$name %in% named | scripts$group %in% groups
-  scripts$name[keep]
+  in_group <- vapply(group_list, function(g) any(g %in% groups), logical(1))
+  scripts$name[scripts$name %in% named | in_group]
 }
 
 # Main entry point. `...` accepts script names and/or group names as strings.

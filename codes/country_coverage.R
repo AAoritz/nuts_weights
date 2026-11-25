@@ -55,30 +55,22 @@ country_meta <- tribble(
   "UK",   "United Kingdom",        "EU member until Brexit (2020)"
 )
 
-# ── 2. Read all NUTS-3 matrix files and extract country codes ──────────────────
+# ── 2. Extract country codes from the NUTS-3 conversion tables ──────────────────
 
-matrix_dir <- here::here("data", "jrc_nuts_converter_matrices")
+# Conversion tables as shipped in the pinned release of the nuts package
+source(here::here("codes", "_nuts_source.R"))
+require_nuts_version()
+data(cross_walks, package = "nuts")
 
-files_n3 <- list.files(matrix_dir, pattern = "^n3_cm_v.*\\.csv$", full.names = TRUE)
-
-extract_versions <- function(filename) {
-  # e.g. "n3_cm_v2016_v2021.csv" -> c("2016", "2021")
-  stringr::str_extract_all(basename(filename), "\\d{4}")[[1]]
-}
-
-coverage_long <- map_dfr(files_n3, function(f) {
-  versions <- extract_versions(f)
-  df <- read_csv(f, col_types = cols(.default = "c"), show_col_types = FALSE)
-  countries <- union(
-    substr(df[[1]], 1, 2),  # source codes
-    substr(df[[2]], 1, 2)   # target codes
-  ) |> unique() |> sort()
-  tibble(
-    version_from = versions[1],
-    version_to   = versions[2],
-    country_code = countries
-  )
-})
+# One entry per country and pair of NUTS versions (earlier -> later) in which the
+# country has at least one NUTS 3 code
+coverage_long <- cross_walks |>
+  filter(level == 3, as.integer(from_version) < as.integer(to_version)) |>
+  transmute(version_from = from_version, version_to = to_version,
+            from_cc = substr(from_code, 1, 2), to_cc = substr(to_code, 1, 2)) |>
+  pivot_longer(c(from_cc, to_cc), values_to = "country_code") |>
+  distinct(version_from, version_to, country_code) |>
+  arrange(version_from, version_to, country_code)
 
 # ── 3. Build a wide presence matrix ───────────────────────────────────────────
 

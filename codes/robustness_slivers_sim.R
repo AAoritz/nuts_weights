@@ -6,10 +6,14 @@
 # │             and tracking how population-conversion error (MAPE) grows with
 # │             the number of false positives added.
 # │  Output     figs/robustness_slivers_sim.png
+# │             data/stats/slivers_stats.rds
+# │             data/nuts3_2024_neighbours.csv (cached list of bordering regions)
 # └────────────────────────────────────────────────────────────────────────────
 
 library(tidyverse)
 library(nuts)
+source("codes/_nuts_source.R")
+require_nuts_version()
 
 set.seed(42)
 
@@ -37,10 +41,54 @@ pop_2006 <- cross_walks %>%
 cw_true <- cross_walks %>%
   filter(from_version == 2006, to_version == 2024, nchar(from_code) == 5)
 
-# All unique (from_code, to_code) pairs available for sampling
-all_pairs <- cw_true %>%
-  select(from_code, to_code, country) %>%
-  distinct()
+# Neighbours: pairs of NUTS 3 regions (2024) that share a border. Derived from
+# the GISCO geometries (1:10 million) and cached, so the download happens once.
+neigh_file <- "data/nuts3_2024_neighbours.csv"
+if (!file.exists(neigh_file)) {
+  library(sf)
+  shp <- giscoR::gisco_get_nuts(year = "2024", nuts_level = 3,
+                                resolution = "10", epsg = "3035")
+  touching <- st_intersects(shp, shp)
+  neighbours <- tibble(
+    geo       = rep(shp$NUTS_ID, lengths(touching)),
+    neighbour = shp$NUTS_ID[unlist(touching)]
+  ) %>%
+    filter(geo != neighbour) %>%
+    arrange(geo, neighbour)
+  write_csv(neighbours, neigh_file)
+}
+neighbours <- read_csv(neigh_file, show_col_types = FALSE)
+
+# Candidate false positives: slivers arise where the boundaries of two versions
+# almost coincide, that is between a source region and a region next to it. A
+# candidate is therefore a pair of a 2006 source region and a 2024 target region
+# of the same country that do NOT overlap in the true crosswalk, where the
+# target borders one of the true targets of the source region. A flow between
+# such a pair is spurious by definition and diverts part of the source region to
+# a neighbour it does not belong to. (Adding area to a pair that already exists
+# would leave most weights unchanged, since most source regions have a single
+# target.) Source regions without a neighbour in their country, mostly islands,
+# receive no sliver.
+candidate_pairs <- cw_true %>%
+  distinct(from_code, country, true_target = to_code) %>%
+  inner_join(neighbours, by = c("true_target" = "geo"),
+             relationship = "many-to-many") %>%
+  distinct(from_code, country, to_code = neighbour) %>%
+  # same country, and a target of the 2006 -> 2024 crosswalk
+  semi_join(distinct(cw_true, to_code, country), by = c("to_code", "country")) %>%
+  anti_join(cw_true, by = c("from_code", "to_code")) %>%
+  # every source region with a neighbour is equally likely to receive a sliver
+  group_by(from_code) %>%
+  mutate(p = 1 / n()) %>%
+  ungroup()
+
+n_sources         <- n_distinct(cw_true$from_code)
+n_sources_neigh   <- n_distinct(candidate_pairs$from_code)
+cat("Candidate neighbour pairs:", nrow(candidate_pairs), "
+")
+cat("Source regions with a neighbour:", n_sources_neigh, "of", n_sources, "
+")
+stopifnot(nrow(candidate_pairs) > 0)
 
 # Area-weighted conversion (manual, so we can inject noise)
 convert_pop <- function(cw, pop_source) {
@@ -60,9 +108,10 @@ n_reps   <- 50
 
 results <- map_dfr(n_values, function(n) {
   map_dfr(seq_len(n_reps), function(rep) {
-    # Sample n random flows and assign uniform random areas in (0, 2)
-    fake_flows <- all_pairs %>%
-      slice_sample(n = n, replace = TRUE) %>%
+    # Sample n spurious flows and assign uniform random areas in (0, 2)
+    fake_flows <- candidate_pairs %>%
+      slice_sample(n = n, weight_by = p, replace = TRUE) %>%
+      select(from_code, to_code, country) %>%
       mutate(
         from_version = "2006",
         to_version   = "2024",
@@ -101,24 +150,17 @@ baseline_mae  <- inner_join(pop_truth, pop_conv_base, by = "to_code") %>%
   summarise(mae = mean(abs(rel_error))) %>%
   pull(mae)
 
-baseline_row <- tibble(
-  n        = 0,
-  mae_mean = baseline_mae,
-  mae_p25  = baseline_mae,
-  mae_p75  = baseline_mae,
-  mae_p05  = baseline_mae,
-  mae_p95  = baseline_mae
-)
-
-results_plot <- bind_rows(baseline_row, results_summary)
+# The n = 0 scenario of the simulation is the baseline itself.
+stopifnot(isTRUE(all.equal(results_summary$mae_mean[results_summary$n == 0],
+                           baseline_mae)))
 
 # Figure
-p <- ggplot(results_plot, aes(x = n)) +
+p <- ggplot(results_summary, aes(x = n)) +
   geom_ribbon(aes(ymin = mae_p05, ymax = mae_p95), fill = "#4E84C4", alpha = 0.15) +
   geom_ribbon(aes(ymin = mae_p25, ymax = mae_p75), fill = "#4E84C4", alpha = 0.30) +
   geom_line(aes(y = mae_mean), color = "#4E84C4", linewidth = 0.8) +
-  scale_x_continuous(breaks = c(0, n_values)) +
-  scale_y_continuous(labels = scales::percent_format(accuracy = 0.01)) +
+  scale_x_continuous(breaks = n_values) +
+  scale_y_continuous(labels = scales::percent_format(accuracy = 0.001)) +
   labs(
     x     = "Number of false positive slivers added",
     y     = "Mean absolute percentage error (MAPE)"
@@ -158,7 +200,14 @@ slivers_stats <- list(
   n_step            = unique(diff(n_values)),
   n_reps            = n_reps,
   sliver_area_max   = 2,                        # Uniform(0, 2) km^2 upper bound
-  cw_n_entries      = nrow(cw_true)             # true 2006->2024 NUTS-3 crosswalk rows
+  cw_n_entries      = nrow(cw_true),            # true 2006->2024 NUTS-3 crosswalk rows
+  n_candidate_pairs = nrow(candidate_pairs),    # non-overlapping neighbour pairs
+  n_sources         = n_sources,                # 2006 source regions
+  n_sources_neigh   = n_sources_neigh,          # ... with at least one candidate
+  # median area of a 2006 source region, for comparison with the sliver size
+  src_area_median   = cw_true %>% group_by(from_code) %>%
+                        summarise(a = sum(areaKm), .groups = "drop") %>%
+                        pull(a) %>% median()
 )
 
 saveRDS(slivers_stats, "data/stats/slivers_stats.rds")

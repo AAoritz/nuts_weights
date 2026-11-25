@@ -34,6 +34,23 @@ quarto render nuts_article.qmd --to scientific-data-pdf
 quarto render nuts_article.qmd --to docx
 ```
 
+## Package version and conversion tables
+
+All scripts use version **1.3.0** of the `nuts` package, which is set in
+`codes/_nuts_source.R`. The scripts stop if a different version is installed.
+Install the required version with:
+
+```r
+remotes::install_github("ropensci/nuts@v1.3.0")
+```
+
+The conversion tables are not stored in this repository. All analysis reads
+them from the package (`data(cross_walks)`). Only the counts of csv files and
+columns quoted in Data Records come from the raw csv tables:
+`codes/intext_numbers.R` downloads the tables of the same release from the
+package repository on first use and caches them in `data/cache/` (git-ignored),
+so its first run needs an internet connection.
+
 ## Running the code
 
 All figure- and data-generating scripts live in `codes/` and are driven by a master
@@ -48,7 +65,7 @@ Rscript codes/run_all.R
 # Run only scripts that produce a figure
 Rscript codes/run_all.R figures
 
-# Run only the validation scripts
+# Run only the validation and robustness scripts
 Rscript codes/run_all.R validation
 
 # Run one or more named scripts (with or without the .R extension)
@@ -70,9 +87,11 @@ Individual scripts can also be run on their own from the project root:
 | --- | --- |
 | `codes/country_coverage.R` | `data/country_coverage_summary.csv`, `data/country_coverage_matrix.csv` |
 | `codes/nuts_revisions_map.R` | `figs/european_nuts_changes.png` |
-| `codes/robustness_slivers_sim.R` | `figs/robustness_slivers_sim.png`, `data/stats/slivers_stats.rds` |
-| `codes/validation_eurostat.R` | `figs/validation_eurostat.png`, `data/stats/roundtrip_stats.rds` |
+| `codes/robustness_slivers_sim.R` | `figs/robustness_slivers_sim.png`, `data/stats/slivers_stats.rds`, `data/nuts3_2024_neighbours.csv` (cached) |
+| `codes/validation_eurostat.R` | `figs/validation_eurostat.png`, `data/stats/roundtrip_stats.rds`, `data/stats/roundtrip_regions.rds` |
 | `codes/validation_gdp_pop.R` | `figs/validation_gdp_pop_multiyear.png`, `figs/validation_gdp_pop_singleyear.png`, `data/stats/gdp_pop_stats.{csv,rds}` |
+| `codes/validation_heterogeneity.R` | `figs/validation_heterogeneity.png`, `data/stats/heterogeneity_stats.rds` (run after `validation_eurostat.R`) |
+| `codes/merge_example_figures.R` | `figs/example_absolute.png`, `figs/example_relative.png` (tiles the worked-example slides into one file per figure) |
 | `codes/intext_numbers.R` | `data/stats/intext_numbers.rds` |
 
 ```bash

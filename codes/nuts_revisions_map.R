@@ -14,6 +14,8 @@ rm(list = ls())
 library(eurostat)
 library(tidyverse)
 library(nuts)
+source("codes/_nuts_source.R")
+require_nuts_version()
 library(sf)
 library(giscoR)
 library(viridis)
@@ -129,8 +131,12 @@ nuts_3_area_changes <- cross_walks %>%
   group_by(from_code, from_version, to_version) %>% 
   mutate(w_pop21 = pop21 / sum(pop21),
          w_areaKm = areaKm / sum(areaKm)) %>%
-  ungroup() %>% 
-  select(from_code, to_code, from_version, to_version, country, w_areaKm, names(.)) %>% 
+  ungroup() %>%
+  # Number of source regions contributing to each target region
+  group_by(to_code, from_version, to_version) %>%
+  mutate(n_sources = n()) %>%
+  ungroup() %>%
+  select(from_code, to_code, from_version, to_version, country, w_areaKm, names(.)) %>%
   # Create label for facet
   mutate(version_flow_label = paste0(from_version, " → ", to_version), 
          version_flow_label = fct_relevel(version_flow_label, "2006 → 2024", after = Inf)) %>% 
@@ -142,12 +148,10 @@ nuts_3_area_changes <- cross_walks %>%
 # NUTS REVISIONS MAP
 #===================================
 nuts_3_area_changes <- nuts_3_area_changes %>%   
-  # Keep only changes that affected area
-  filter(w_areaKm < 1) 
-
-# Filter Norway until glitch is cleared
-nuts_3_area_changes <- nuts_3_area_changes %>% 
-  filter(!(from_version == "2013" & to_version == "2016" & substr(from_code, 0, 2) == "NO"))
+  # Keep only changes that affected boundaries: a source region divided among
+  # several targets (w_areaKm < 1) or several source regions merged into one
+  # target (n_sources > 1). Pure recodings are dropped.
+  filter(w_areaKm < 1 | n_sources > 1)
 
 nuts_3_area_changes %>% 
   filter(from_version == "2006" & to_version == "2024") %>% 
@@ -253,11 +257,80 @@ p4 <- plot_eu_from_to("2016", "2021")
 p5 <- plot_eu_from_to("2021", "2024")
 p6 <- plot_eu_from_to("2006", "2024")
 
-# Arrange in 2 columns, 3 rows using patchwork
+# ZOOMED EXAMPLES OF THE THREE TYPES OF CHANGE
+#================================================================
+# At continental scale individual changes are hard to see, so a fourth row
+# zooms in on one example each of a merger, a split and a boundary shift.
+# Higher-resolution geometries (1:3 million) are used for these panels.
+zoom_versions <- c("2013", "2016", "2021", "2024")
+zoom_maps <- map(zoom_versions, \(x)
+  gisco_get_nuts(nuts_level = 3, epsg = "3035", resolution = "03", year = x) %>%
+    clean_names())
+names(zoom_maps) <- zoom_versions
+
+plot_zoom <- function(from_version_year, to_version_year, from_codes, to_codes, type) {
+
+  from_color   <- "#1f77b4"
+  to_color     <- "#ff7f0e"
+  base_color   <- "#F8F9FA"
+  border_color <- "#D0D5DA"
+
+  src <- zoom_maps[[from_version_year]] %>% filter(geo %in% from_codes)
+  tgt <- zoom_maps[[to_version_year]]   %>% filter(geo %in% to_codes)
+  stopifnot(nrow(src) == length(from_codes), nrow(tgt) == length(to_codes))
+
+  # Frame: bounding box of all regions involved, padded by 12%
+  bb  <- st_bbox(c(st_geometry(src), st_geometry(tgt)))
+  pad <- 0.12 * max(bb["xmax"] - bb["xmin"], bb["ymax"] - bb["ymin"])
+
+  # Target codes are printed inside the regions; source codes go in the title
+  lab_tgt <- suppressWarnings(st_point_on_surface(tgt))
+
+  ggplot() +
+    geom_sf(data = zoom_maps[[to_version_year]], fill = base_color,
+            color = border_color, linewidth = 0.2) +
+    # Source boundaries are drawn wide and underneath, target boundaries narrow
+    # and on top, so that both remain visible where they coincide.
+    geom_sf(data = tgt, color = NA, fill = alpha(to_color, 0.5)) +
+    geom_sf(data = src, color = from_color, fill = NA, linewidth = 1.6) +
+    geom_sf(data = tgt, color = "#D95F02", fill = NA, linewidth = 0.5) +
+    geom_sf_text(data = lab_tgt, aes(label = geo), color = "#8A4500",
+                 size = 3.2, fontface = "bold") +
+    coord_sf(
+      xlim = c(bb["xmin"] - pad, bb["xmax"] + pad),
+      ylim = c(bb["ymin"] - pad, bb["ymax"] + pad),
+      crs = 3035, expand = FALSE
+    ) +
+    theme_void() +
+    theme(
+      plot.title    = element_markdown(size = 11, hjust = 0.5, margin = margin(b = 3)),
+      plot.subtitle = element_markdown(size = 9, hjust = 0.5, margin = margin(b = 5)),
+      plot.margin   = margin(5, 5, 5, 5),
+      panel.border  = element_rect(color = "grey60", fill = NA, linewidth = 0.4)
+    ) +
+    labs(
+      title = paste0("**", type, "**, <span style='color:#1f77b4'>**", from_version_year,
+                     "**</span> → <span style='color:#ff7f0e'>**", to_version_year, "**</span>"),
+      subtitle = paste0("<span style='color:#1f77b4'>", paste(from_codes, collapse = ", "),
+                        "</span> → <span style='color:#B35900'>",
+                        paste(to_codes, collapse = ", "), "</span>")
+    )
+}
+
+# Merger: the districts of Göttingen and Osterode am Harz (Germany) become one
+z1 <- plot_zoom("2013", "2016", c("DE915", "DE919"), c("DE91C"), "Merger")
+# Split: the county of Viken (Norway) is divided in three
+z2 <- plot_zoom("2021", "2024", c("NO082"), c("NO083", "NO084", "NO085"), "Split")
+# Boundary shift: the region around Riga (Latvia) is divided among its neighbours
+z3 <- plot_zoom("2021", "2024", c("LV003", "LV006", "LV007", "LV008"),
+                c("LV00A", "LV00B", "LV00C"), "Boundary shift")
+
+# Arrange: 3 rows of continental maps plus one row of zoomed examples
 combined_plot <- (p1 | p2) / 
   (p3 | p4) / 
-  (p5 | p6) + 
-  plot_layout(guides = "collect") &  # This collects all legends into one
+  (p5 | p6) /
+  (z1 | z2 | z3) + 
+  plot_layout(guides = "collect", heights = c(1, 1, 1, 0.55)) &  # one shared legend
   theme(legend.position = "bottom")  # Position the single legend at bottom
 
 
@@ -265,7 +338,7 @@ ggsave(
   filename = "figs/european_nuts_changes.png",
   plot = combined_plot,
   width = 12,      # inches
-  height = 16,     # inches  
+  height = 18.5,   # inches  
   dpi = 300,       # high resolution for publication
   bg = "white",    # white background
   device = "png"

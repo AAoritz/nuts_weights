@@ -7,12 +7,15 @@
 # │             measuring cumulative error after ten steps by interpolation
 # │             weight. Residual deviation gauges information loss.
 # │  Output     figs/validation_eurostat.png
+# │             data/stats/roundtrip_stats.rds, data/stats/roundtrip_regions.rds
 # └────────────────────────────────────────────────────────────────────────────
 
 rm(list = ls())
 
 library(tidyverse)
 library(nuts)
+source("codes/_nuts_source.R")
+require_nuts_version()
 library(scales)
 library(extrafont)
 loadfonts(quiet = TRUE)
@@ -36,13 +39,16 @@ CHAIN <- c("2024", "2021", "2016", "2013", "2010", "2006",
 # DATA LOADING: Land Area and Population from the Crosswalk
 # =============================================================================
 #
-# Summing the crosswalk's own areaKm and pop21 fields within each NUTS 2024
-# source region gives exact NUTS 2024 totals with complete coverage.
+# The crosswalk stacks every pair of versions, including each version with
+# itself. The 2024 -> 2024 rows hold the area and population of each NUTS 2024
+# region, so they give exact NUTS 2024 totals.
 
 data("cross_walks")
 
-cw_2024_n3 <- cross_walks %>%
-  filter(level == 3, from_version == 2024) %>%
+cw_2024_all <- cross_walks %>% filter(level == 3, from_version == 2024)
+
+cw_2024_n3 <- cw_2024_all %>%
+  filter(to_version == 2024) %>%
   group_by(from_code) %>%
   summarise(
     area_km2 = sum(areaKm, na.rm = TRUE),
@@ -50,6 +56,23 @@ cw_2024_n3 <- cross_walks %>%
     .groups  = "drop"
   ) %>%
   rename(geo = from_code)
+
+# The chain passes through every version, so only regions with a counterpart in
+# all versions can return from it. A region without one (for example Mayotte,
+# which enters the classification in 2013) comes back empty and would be scored
+# as a -100% error that has nothing to do with interpolation. These regions
+# stay in the input, so that their neighbours are converted correctly, but are
+# excluded from the evaluation and reported.
+n_versions <- n_distinct(cross_walks$to_version)
+excluded_codes <- cw_2024_all %>%
+  group_by(from_code) %>%
+  summarise(n_ver = n_distinct(to_version), .groups = "drop") %>%
+  filter(n_ver < n_versions) %>%
+  pull(from_code) %>%
+  sort()
+
+cat("NUTS 3 regions without a counterpart in every version (not evaluated):",
+    paste(excluded_codes, collapse = ", "), "\n")
 
 area_2024 <- cw_2024_n3 %>% select(geo, area_km2) %>% filter(area_km2 > 0)
 pop_2024  <- cw_2024_n3 %>% select(geo, pop = pop21) %>% filter(pop > 0)
@@ -69,6 +92,9 @@ do_round_trip <- function(start_dat, var_col, w) {
 
   for (i in seq(2, length(CHAIN))) {
     cl  <- nuts_classify(dat, nuts_code = "geo")
+    # The version is known at every step, so it is set directly instead of
+    # being inferred. This relies on the structure of the classified object.
+    stopifnot(is.data.frame(cl$data), "from_version" %in% names(cl$data))
     cl$data$from_version <- CHAIN[i-1]
 
     dat <- nuts_convert_version(
@@ -82,7 +108,15 @@ do_round_trip <- function(start_dat, var_col, w) {
       select(geo = to_code, value)
   }
 
+  # Every evaluated region must return from the chain.
+  lost <- setdiff(start_dat$geo, c(dat$geo, excluded_codes))
+  if (length(lost) > 0) {
+    stop("Regions lost in the round trip (", var_col, ", ", w, "): ",
+         paste(lost, collapse = ", "))
+  }
+
   start_dat %>%
+    filter(!geo %in% excluded_codes) %>%
     rename(orig = !!sym(var_col)) %>%
     inner_join(rename(dat, rt = value), by = "geo") %>%
     filter(!is.na(orig), !is.na(rt), orig > 0) %>%
@@ -188,7 +222,7 @@ mape_labels_all <- results_b %>%
 # (unchanged regions have floating-point noise <1e-10% and cannot be
 # meaningfully displayed on a log axis)
 plot_data <- results_b %>%
-  filter(!is.na(abs_rel_error), abs_rel_error >= 0.001) %>%
+  filter(!is.na(abs_rel_error), abs_rel_error >= CHANGED_THRESHOLD) %>%
   mutate(
     weight_label   = factor(weight_label,   levels = weight_order),
     variable_label = factor(variable_label, levels = var_levels)
@@ -232,7 +266,7 @@ gg_all <- ggplot(plot_data,
   ) +
   labs(
     x       = "Absolute relative error (%, log scale)",
-    y       = NULL
+    y       = "Interpolation weight"
   ) +
   theme_minimal(base_family = "Times New Roman", base_size = 11) +
   theme(
@@ -329,9 +363,15 @@ roundtrip_stats <- list(
   n_pop_unchanged  = n_pop  - n_pop_changed,
   n_steps          = length(CHAIN) - 1L,
   chain            = CHAIN,
+  excluded         = excluded_codes,          # no counterpart in every version
+  n_excluded       = length(excluded_codes),
   mape_area        = named_mape("area_km2"),  # all-regions MAPE, by weight
   mape_pop         = named_mape("pop")        # all-regions MAPE, by weight
 )
 
 saveRDS(roundtrip_stats, "data/stats/roundtrip_stats.rds")
+
+# Region-level errors (one row per NUTS 3 region x weight x variable), reused by
+# codes/validation_heterogeneity.R.
+saveRDS(results_b, "data/stats/roundtrip_regions.rds")
 cat("\nIn-text numbers saved to data/stats/roundtrip_stats.rds\n")

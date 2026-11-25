@@ -5,6 +5,9 @@ codes/old/
 .Rproj.user/
 .claude/
 cover_letter/
+review/
 CLAUDE.md
 nuts_article.qmd
 nuts_article.pdf
+nuts_article.tex
+data/cache/

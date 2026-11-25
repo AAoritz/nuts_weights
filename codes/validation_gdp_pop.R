@@ -16,6 +16,8 @@ rm(list = ls())
 library(tidyverse)
 library(readxl)
 library(nuts)
+source("codes/_nuts_source.R")
+require_nuts_version()
 library(patchwork)
 library(scales)
 library(extrafont)
@@ -116,11 +118,13 @@ cw_21_24 <- cross_walks %>%
   group_by(from_code) %>% mutate(w_area = areaKm / sum(areaKm)) %>% ungroup() %>%
   group_by(from_code) %>% mutate(n_from = n()) %>% ungroup() %>%
   group_by(to_code)   %>% mutate(n_to   = n()) %>% ungroup() %>%
+  # A partial flow is tested first: a region can keep its code and still lose
+  # part of its territory to a neighbour.
   mutate(change_type = case_when(
+    w_area  > 0 & w_area < 1    ~ "Boundary Shifted",
     from_code == to_code         ~ "Unchanged",
     w_area == 1 & n_to == 1     ~ "Recoded",
     w_area == 1 & n_to  > 1     ~ "Merged",
-    w_area  > 0 & w_area < 1    ~ "Boundary Shifted",
     TRUE                         ~ "Other"
   ))
 
@@ -247,6 +251,10 @@ gdp_covered %>% count(year) %>% print()
 
 convert_and_compare <- function(source_df, var_col, truth_df, truth_col, w) {
   cl <- nuts_classify(source_df, nuts_code = "geo", group_vars = "year")
+  # The source files are published in NUTS 2021, so the version is set directly
+  # instead of being inferred. This relies on the structure of the classified
+  # object.
+  stopifnot(is.data.frame(cl$data), "from_version" %in% names(cl$data))
   cl$data$from_version <- "2021"
 
   converted <- nuts_convert_version(
@@ -363,7 +371,15 @@ xlim_for <- function(df) {
   c(0.01, max(v, 1))
 }
 
-make_error_plot <- function(df) {
+# Panel heading: variable name plus the reference year(s) actually used,
+# e.g. "Population 2023" or "GDP 2021/22".
+year_label <- function(df) {
+  yr <- range(df$year)
+  if (yr[1] == yr[2]) as.character(yr[1])
+  else paste0(yr[1], "/", substr(as.character(yr[2]), 3, 4))
+}
+
+make_error_plot <- function(df, title = NULL, y_title = NULL) {
   xl <- xlim_for(df)
 
   mape_labels <- df %>%
@@ -375,10 +391,13 @@ make_error_plot <- function(df) {
       label        = sprintf("MAPE %.1f%%", mape)
     )
 
+  # Errors below the axis floor are plotted at the floor rather than dropped, so
+  # that the boxes summarise the same observations as the MAPE labels.
   df %>%
-    filter(!is.na(abs_rel_error), abs_rel_error >= xl[1]) %>%
-    mutate(weight_label = factor(weight_label, levels = weight_order)) %>%
-    ggplot(aes(x = abs_rel_error, y = weight_label, fill = weight_label)) +
+    filter(!is.na(abs_rel_error)) %>%
+    mutate(weight_label = factor(weight_label, levels = weight_order),
+           err_plot     = pmax(abs_rel_error, xl[1])) %>%
+    ggplot(aes(x = err_plot, y = weight_label, fill = weight_label)) +
     geom_boxplot(
       alpha         = 0.75,
       outlier.size  = 0.5,
@@ -403,22 +422,26 @@ make_error_plot <- function(df) {
     ) +
     scale_fill_brewer(palette = "Set2") +
     labs(
+      title    = title,
       x        = "Absolute relative error (%, log scale)",
-      y        = NULL
+      y        = y_title
     ) +
     theme_minimal(base_family = "Times New Roman", base_size = 11) +
     theme(
       panel.grid.minor   = element_blank(),
       panel.grid.major.y = element_blank(),
-      axis.text.y        = element_text(size = 9)
+      axis.text.y        = element_text(size = 9),
+      plot.title         = element_text(size = 12, face = "bold", hjust = 0.5)
     )
 }
 
 # ---------------------------------------------------------------------------
 # Figure 1: full time series
 # ---------------------------------------------------------------------------
-gg_pop_multi <- make_error_plot(results_pop)
-gg_gdp_multi <- make_error_plot(results_gdp)
+gg_pop_multi <- make_error_plot(results_pop,
+  title = paste("Population", year_label(results_pop)), y_title = "Interpolation weight")
+gg_gdp_multi <- make_error_plot(results_gdp,
+  title = paste("GDP", year_label(results_gdp)))
 
 fig_multiyear <- gg_pop_multi | gg_gdp_multi
 
@@ -435,8 +458,10 @@ cat("\nFigure saved to figs/validation_gdp_pop_multiyear.png\n")
 # ---------------------------------------------------------------------------
 # Figure 2: single year per region
 # ---------------------------------------------------------------------------
-gg_pop_1y <- make_error_plot(results_pop_1y)
-gg_gdp_1y <- make_error_plot(results_gdp_1y)
+gg_pop_1y <- make_error_plot(results_pop_1y,
+  title = paste("Population", year_label(results_pop_1y)), y_title = "Interpolation weight")
+gg_gdp_1y <- make_error_plot(results_gdp_1y,
+  title = paste("GDP", year_label(results_gdp_1y)))
 
 fig_singleyear <- gg_pop_1y | gg_gdp_1y
 
@@ -550,6 +575,29 @@ stats <- list(
     gdp_singleyear = range(results_gdp_1y$year)
   )
 )
+
+# --- Regions formed from the two divided regions around capital cities -------
+# The Lisbon metropolitan area (PT170) was split in two and Pieriga, the ring
+# around Riga (LV007), was divided among three neighbouring regions. These
+# target regions account for most of the GDP error (Population 2021 weight,
+# single-year comparison).
+capital_sources <- c("PT170", "LV007")
+capital_targets <- cw_21_24 %>%
+  filter(from_code %in% capital_sources) %>%
+  pull(to_code) %>% unique()
+
+gdp_p21 <- results_gdp_1y %>% filter(weight == "pop21")
+stats$capital <- list(
+  targets          = sort(intersect(capital_targets, gdp_p21$geo)),
+  n_targets        = length(intersect(capital_targets, gdp_p21$geo)),
+  share_abs_error  = sum(gdp_p21$abs_rel_error[gdp_p21$geo %in% capital_targets]) /
+                     sum(gdp_p21$abs_rel_error) * 100,
+  gdp_mape_without = mean(gdp_p21$abs_rel_error[!gdp_p21$geo %in% capital_targets]),
+  gdp_max_error    = max(gdp_p21$abs_rel_error[gdp_p21$geo %in% capital_targets])
+)
+cat("\nCapital-region targets:", paste(stats$capital$targets, collapse = ", "), "\n")
+cat("  share of summed absolute GDP error:", round(stats$capital$share_abs_error, 1), "%\n")
+cat("  GDP MAPE without them:", round(stats$capital$gdp_mape_without, 2), "%\n")
 
 saveRDS(stats, "data/stats/gdp_pop_stats.rds")
 cat("Named list saved to data/stats/gdp_pop_stats.rds\n")
